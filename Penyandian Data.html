@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRYPTO C95 — CBC Cipher Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #00ff88;
+    --green-dim: #00cc6a;
+    --green-dark: #004422;
+    --green-glow: rgba(0,255,136,0.15);
+    --red: #ff3355;
+    --amber: #ffcc00;
+    --cyan: #00eeff;
+    --purple: #bb00ff;
+    --bg: #050a06;
+    --bg-card: rgba(0,255,136,0.04);
+    --border: rgba(0,255,136,0.2);
+    --border-bright: rgba(0,255,136,0.5);
+    --text: #c8ffd4;
+    --text-dim: rgba(200,255,212,0.5);
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Orbitron', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCANLINES */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* GRID BG */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .logo-title {
+    font-family: var(--display);
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--green);
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 20px var(--green), 0 0 40px rgba(0,255,136,0.3);
+    animation: pulse-title 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-title {
+    0%, 100% { text-shadow: 0 0 20px var(--green), 0 0 40px rgba(0,255,136,0.3); }
+    50% { text-shadow: 0 0 30px var(--green), 0 0 60px rgba(0,255,136,0.5), 0 0 80px rgba(0,255,136,0.2); }
+  }
+
+  .logo-sub {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.3em;
+    margin-top: 2px;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: blink 1.4s step-end infinite;
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* CARDS */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .card:focus-within {
+    border-color: var(--border-bright);
+    box-shadow: 0 0 20px rgba(0,255,136,0.08);
+  }
+
+  /* corner brackets */
+  .card::before, .card::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    border-color: var(--green-dim);
+    border-style: solid;
+  }
+  .card::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+  .card::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+  .card-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-label::before {
+    content: '//';
+    color: var(--text-dim);
+  }
+
+  /* TEXTAREA */
+  textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: 2px;
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 0.75rem;
+    resize: vertical;
+    min-height: 110px;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+
+  textarea:focus { border-color: var(--green-dim); }
+  textarea::placeholder { color: rgba(0,255,136,0.25); }
+  textarea[readonly] { cursor: default; }
+
+  /* DROP AREA */
+  .drop-area {
+    border: 1px dashed rgba(0,255,136,0.25);
+    border-radius: 2px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-area:hover, .drop-area.active {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.05);
+  }
+
+  .drop-area.active { border-style: solid; }
+
+  .drop-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.6;
+  }
+
+  .drop-text {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .file-name {
+    font-size: 0.72rem;
+    color: var(--cyan);
+    margin-top: 0.5rem;
+    letter-spacing: 0.05em;
+  }
+
+  /* BUTTONS */
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 0.6rem;
+    margin: 1rem 0;
+  }
+
+  .btn {
+    padding: 0.7rem 0.5rem;
+    border: 1px solid;
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    background: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .btn:hover::before { opacity: 0.08; }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-encrypt { color: var(--green); border-color: var(--green); }
+  .btn-encrypt:hover { box-shadow: 0 0 15px rgba(0,255,136,0.25); }
+
+  .btn-decrypt { color: var(--red); border-color: var(--red); }
+  .btn-decrypt:hover { box-shadow: 0 0 15px rgba(255,51,85,0.25); }
+
+  .btn-animate { color: var(--purple); border-color: var(--purple); }
+  .btn-animate:hover { box-shadow: 0 0 15px rgba(187,0,255,0.25); }
+
+  .btn-copy { color: var(--cyan); border-color: var(--cyan); }
+  .btn-copy:hover { box-shadow: 0 0 15px rgba(0,238,255,0.25); }
+
+  .btn-file-enc { color: var(--green-dim); border-color: var(--green-dim); }
+  .btn-file-dec { color: rgba(255,51,85,0.7); border-color: rgba(255,51,85,0.7); }
+
+  .btn-row-file {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+  }
+
+  /* BLOCK VIEW */
+  #visual {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 32px;
+  }
+
+  .block {
+    padding: 3px 8px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid rgba(0,255,136,0.25);
+    border-radius: 2px;
+    font-size: 0.62rem;
+    color: var(--green);
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+    transition: all 0.3s;
+  }
+
+  .block.highlight {
+    background: rgba(255,204,0,0.15);
+    border-color: var(--amber);
+    color: var(--amber);
+    box-shadow: 0 0 10px rgba(255,204,0,0.3);
+    transform: translateY(-2px);
+  }
+
+  /* CBC DIAGRAM */
+  #diagram {
+    width: 100%;
+    height: 160px;
+    display: block;
+  }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .stat-card {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 0.75rem;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: var(--display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  .stat-label {
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* TOAST */
+  #toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 9998;
+    box-shadow: 0 0 20px rgba(0,255,136,0.2);
+  }
+
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* TERMINAL CURSOR */
+  .cursor::after {
+    content: '█';
+    animation: blink 1s step-end infinite;
+    font-size: 0.7em;
+    margin-left: 2px;
+    color: var(--green);
+  }
+
+  /* PROCESSING OVERLAY */
+  .processing {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--green);
+    letter-spacing: 0.2em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    border-radius: 2px;
+  }
+
+  .processing.active { opacity: 1; pointer-events: all; }
+
+  /* DIVIDER */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 2px; }
+
+  @media (max-width: 600px) {
+    .btn-row { grid-template-columns: 1fr 1fr; }
+    .stats-row { grid-template-columns: 1fr 1fr 1fr; }
+    .logo-title { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-title">PENYANDIAN DATA</div>
+      <div class="logo-sub">CBC CIPHER TERMINAL v2.0</div>
+    </div>
+    <div class="status-bar">
+      <div class="status-dot"></div>
+      <span>SYSTEM ONLINE</span>
+    </div>
+  </header>
+
+  <!-- INPUT -->
+  <div class="card">
+    <div class="card-label">Input Plaintext / Ciphertext</div>
+    <textarea id="inputText" placeholder="// ketik teks di sini..." oninput="updateStats()"></textarea>
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="btn-row">
+    <button class="btn btn-encrypt" onclick="encrypt()">⬛ ENCRYPT</button>
+    <button class="btn btn-decrypt" onclick="decrypt()">⬚ DECRYPT</button>
+    <button class="btn btn-animate" onclick="animateCBC()">▶ ANIMATE</button>
+    <button class="btn btn-copy" onclick="copyText()">⧉ COPY</button>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="card" style="position:relative;">
+    <div class="card-label">Output</div>
+    <textarea id="outputText" readonly placeholder="// hasil enkripsi/dekripsi..."></textarea>
+    <div id="proc-output" class="processing">PROCESSING...</div>
+  </div>
+
+  <div class="divider">FILE OPERATIONS</div>
+
+  <!-- FILE UPLOAD -->
+  <div class="card">
+    <div class="card-label">Upload File</div>
+    <div id="dropArea" class="drop-area" onclick="document.getElementById('fileInput').click()">
+      <div class="drop-icon">⬡</div>
+      <div class="drop-text">DRAG & DROP FILE ATAU KLIK</div>
+      <input type="file" id="fileInput" hidden>
+    </div>
+    <p id="fileName" class="file-name"></p>
+    <div class="btn-row-file">
+      <button class="btn btn-file-enc" onclick="encryptFile()">⬛ ENCRYPT FILE</button>
+      <button class="btn btn-file-dec" onclick="decryptFile()">⬚ DECRYPT FILE</button>
+    </div>
+  </div>
+
+  <div class="divider">VISUALIZATION</div>
+
+  <!-- BLOCK VIEW -->
+  <div class="card">
+    <div class="card-label">Block View</div>
+    <div id="visual"></div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const BLOCK_SIZE = 8;
+
+function getKey() {
+  let k = document.getElementById('keyInput').value;
+  return k.padEnd(8, '0').substring(0, 8);
+}
+
+function xorBlock(a, b) {
+  let result = [];
+  for (let i = 0; i < BLOCK_SIZE; i++) {
+    result[i] = ((a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0)) & 0xFF;
+  }
+  return String.fromCharCode(...result);
+}
+
+function substitute(block) {
+  return block.split('').map(c => String.fromCharCode((c.charCodeAt(0) + 3) & 0xFF)).join('');
+}
+
+function inverseSubstitute(block) {
+  return block.split('').map(c => String.fromCharCode((c.charCodeAt(0) - 3 + 256) & 0xFF)).join('');
+}
+
+function toHex(str) {
+  return Array.from(str).map(c => (c.charCodeAt(0) & 0xFF).toString(16).padStart(2, '0')).join('');
+}
+
+function fromHex(hex) {
+  let result = '';
+  for (let i = 0; i < hex.length; i += 2) {
+    result += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  }
+  return result;
+}
+
+function encryptText(text) {
+  const key = '12345678';
+  let prev = key;
+  let result = '';
+  for (let i = 0; i < text.length; i += BLOCK_SIZE) {
+    let block = text.substring(i, i + BLOCK_SIZE).padEnd(8, '\0');   
+    let xored = xorBlock(block, prev);
+    let encrypted = substitute(xored);
+    prev = encrypted;
+    result += encrypted;
+  }
+  return toHex(result);
+}
+
+function decryptText(hexInput) {
+  const key = '12345678';
+  let cipher = fromHex(hexInput);
+  let prev = key;
+  let result = '';
+  for (let i = 0; i < cipher.length; i += BLOCK_SIZE) {
+    let block = cipher.substring(i, i + BLOCK_SIZE);
+    let temp = block;
+    let decrypted = inverseSubstitute(block);
+    let plain = xorBlock(decrypted, prev);
+    prev = temp;
+    result += plain;
+  }
+  // strip null bytes and non-printable trailing chars
+  return result.replace(/\0+$/, '').replace(/[^\x09\x0a\x0d\x20-\x7e\x80-\xff]/g, '');
+}
+
+function encrypt() {
+  let text = document.getElementById('inputText').value;
+  if (!text) { showToast('// ERROR: Input kosong'); return; }
+  let hexResult = encryptText(text);
+  document.getElementById('outputText').value = hexResult;
+  showBlocks(hexResult);
+  updateStats();
+  showToast('// ENCRYPT SUCCESS — ' + Math.ceil(text.length / BLOCK_SIZE) + ' blocks processed');
+}
+
+function decrypt() {
+  let hexInput = document.getElementById('inputText').value.trim();
+  if (!hexInput) { showToast('// ERROR: Input kosong'); return; }
+  let result = decryptText(hexInput);
+  document.getElementById('outputText').value = result;
+  showBlocks(hexInput);
+  updateStats();
+  showToast('// DECRYPT SUCCESS — plaintext recovered');
+}
+
+function showBlocks(text) {
+  let visual = document.getElementById('visual');
+  visual.innerHTML = '';
+  for (let i = 0; i < text.length; i += 16) {
+    let block = text.substring(i, i + 16);
+    let div = document.createElement('div');
+    div.className = 'block';
+    div.textContent = block;
+    visual.appendChild(div);
+  }
+}
+
+async function animateCBC() {
+  let children = document.getElementById('visual').children;
+  if (children.length === 0) { showToast('// Jalankan encrypt/decrypt dulu'); return; }
+  for (let i = 0; i < children.length; i++) {
+    children[i].classList.add('highlight');
+    await new Promise(r => setTimeout(r, 400));
+    children[i].classList.remove('highlight');
+  }
+  showToast('// ANIMATION COMPLETE');
+}
+
+function copyText() {
+  let output = document.getElementById('outputText').value;
+  if (!output) { showToast('// ERROR: Output kosong'); return; }
+  navigator.clipboard.writeText(output).then(() => {
+    showToast('// COPIED TO CLIPBOARD');
+  }).catch(() => {
+    document.getElementById('outputText').select();
+    document.execCommand('copy');
+    showToast('// COPIED TO CLIPBOARD');
+  });
+}
+
+function encryptFile() {
+  let file = document.getElementById('fileInput').files[0];
+  if (!file) { showToast('// ERROR: Pilih file dulu'); return; }
+  const originalName = file.name;
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    let bytes = new Uint8Array(e.target.result);
+    let text = Array.from(bytes).map(b => String.fromCharCode(b)).join('');
+    let hexResult = encryptText(text);
+    downloadFile(hexResult, 'encrypted_' + originalName + '.hex');
+    showToast('// FILE ENCRYPTED → encrypted_' + originalName + '.hex');
+    document.getElementById('fileName').textContent = '';
+    document.getElementById('fileInput').value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function decryptFile() {
+  let file = document.getElementById('fileInput').files[0];
+  if (!file) { showToast('// ERROR: Pilih file dulu'); return; }
+  const originalName = file.name;
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    let hexInput = new TextDecoder().decode(e.target.result).trim();
+    let result = decryptText(hexInput);
+    const outName = 'decrypted_' + originalName.replace('.hex','');
+    let bytes = new Uint8Array(result.split('').map(c => c.charCodeAt(0)));
+    downloadFileBinary(bytes, outName);
+    showToast('// FILE DECRYPTED → ' + outName);
+    document.getElementById('fileName').textContent = '';
+    document.getElementById('fileInput').value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function downloadFileBinary(bytes, filename) {
+  let blob = new Blob([bytes], { type: 'application/octet-stream' });
+  let url = URL.createObjectURL(blob);
+  let link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadFile(data, filename) {
+  let blob = new Blob([data], { type: 'text/plain' });
+  let url = URL.createObjectURL(blob);
+  let link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function updateStats() {
+  let text = document.getElementById('inputText').value;
+  let blocks = text.length > 0 ? Math.ceil(text.length / BLOCK_SIZE) : 0;
+  document.getElementById('stat-blocks').textContent = blocks;
+  document.getElementById('stat-chars').textContent = text.length;
+  document.getElementById('stat-hex').textContent = text.length * 2;
+}
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// DROP AREA
+const dropArea = document.getElementById('dropArea');
+const fileInput = document.getElementById('fileInput');
+
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('active'); });
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('active'));
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropArea.classList.remove('active');
+  fileInput.files = e.dataTransfer.files;
+  showFileName();
+});
+fileInput.addEventListener('change', showFileName);
+
+function showFileName() {
+  if (fileInput.files.length > 0) {
+    document.getElementById('fileName').textContent = '» ' + fileInput.files[0].name;
+  } else {
+    document.getElementById('fileName').textContent = '';
+  }
+}
+
+</script>
+</body>
+</html>
