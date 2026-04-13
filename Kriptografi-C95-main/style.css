@@ -1,0 +1,125 @@
+:root {
+  --app-bg: #020617;
+  --app-surface: #0f172a;
+  --app-primary: #6366f1;
+  --app-secondary: #334155;
+  --app-success: #22c55e;
+  --app-error: #ef4444;
+  --app-warning: #facc15;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* ===== BACKGROUND ===== */
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--app-primary) 30%, transparent), transparent 28%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--app-secondary) 30%, transparent), transparent 26%),
+    linear-gradient(135deg, var(--app-bg), #111827 55%, #1e293b);
+  transition: background 0.3s ease;
+}
+
+.v-theme--light .app-shell {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--app-primary) 20%, transparent), transparent 28%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--app-secondary) 20%, transparent), transparent 26%),
+    linear-gradient(135deg, #eff6ff, #f8fafc 55%, #e2e8f0);
+}
+
+/* ===== MAIN CARD ===== */
+.app-card {
+  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--app-surface) 85%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--app-primary) 20%, transparent);
+  transition: all 0.3s ease;
+}
+
+.v-theme--light .app-card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+/* ===== SECTION CARD ===== */
+.section-card {
+  background: color-mix(in srgb, var(--app-surface) 60%, transparent);
+  transition: all 0.3s ease;
+}
+
+/* ===== DROP ZONE ===== */
+.drop-zone {
+  border: 2px dashed var(--app-primary);
+  border-radius: 20px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.drop-zone:hover,
+.drop-zone--active {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--app-primary) 15%, transparent);
+  border-color: var(--app-success);
+}
+
+/* ===== BLOCK VIEW ===== */
+.block-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.block-chip {
+  font-family: monospace;
+}
+
+.block-chip--highlight {
+  box-shadow: 0 0 0 2px var(--app-warning) inset;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+}
+
+/* ===== DIAGRAM ===== */
+.diagram-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+#diagram {
+  width: 100%;
+  min-width: 420px;
+  height: 220px;
+  display: block;
+}
+
+/* ===== SMOOTH UI ===== */
+.v-btn {
+  transition: all 0.2s ease !important;
+}
+
+.v-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ===== SCROLLBAR (OPTIONAL KEREN) ===== */
+::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--app-primary);
+  border-radius: 10px;
+}
+
