@@ -680,14 +680,6 @@ function downloadFile(data, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function updateStats() {
-  let text = document.getElementById('inputText').value;
-  let blocks = text.length > 0 ? Math.ceil(text.length / BLOCK_SIZE) : 0;
-  document.getElementById('stat-blocks').textContent = blocks;
-  document.getElementById('stat-chars').textContent = text.length;
-  document.getElementById('stat-hex').textContent = text.length * 2;
-}
-
 function showToast(msg) {
   let t = document.getElementById('toast');
   t.textContent = msg;
